@@ -20,11 +20,11 @@ io.on('connection', (socket) => {
         const { username, secretCode } = userData;
 
         if (!users[username]) {
-            users[username] = [socket.id];
+            users[username] = { sockets: [socket.id] };
             socket.join(`${username}-room`);
             socket.emit('loginSuccess', username);
-        } else if (!users[username].includes(socket.id)) {
-            users[username].push(socket.id);
+        } else if (!users[username].sockets.includes(socket.id)) {
+            users[username].sockets.push(socket.id);
             socket.join(`${username}-room`);
             socket.emit('loginSuccess', username);
         } else {
@@ -36,7 +36,7 @@ io.on('connection', (socket) => {
         const { from, to, message } = data;
         const targetRoom = `${to}-room`; // Form a room name based on the recipient
 
-        if (to && users[to] && users[to].includes(socket.id)) {
+        if (to && users[to] && users[to].sockets.includes(socket.id)) {
             io.to(targetRoom).emit('message', { from, message });
         } else {
             socket.emit('messageFailure', 'Invalid recipient or user not found.');
@@ -45,12 +45,12 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         // Handle user disconnect and cleanup
-        const username = Object.keys(users).find(key => users[key].includes(socket.id));
+        const username = Object.keys(users).find(key => users[key].sockets.includes(socket.id));
 
         if (username) {
-            users[username] = users[username].filter(id => id !== socket.id);
+            users[username].sockets = users[username].sockets.filter(id => id !== socket.id);
 
-            if (users[username].length === 0) {
+            if (users[username].sockets.length === 0) {
                 delete users[username];
                 console.log(`${username} disconnected`);
             }
